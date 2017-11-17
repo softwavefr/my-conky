@@ -1,0 +1,181 @@
+conky.config = {
+--http://conky.sourceforge.net/config_settings.html
+--http://conky.sourceforge.net/variables.html
+--start with e.g.: pkill conky; conky -c $USER/etc/conky.conkyrc
+
+    background = true,-- if true, Conky will be forked to background when started
+    double_buffer = true,-- eliminates flicker
+
+    alignment = 'bottom_right',-- where to count from when specifiying gap_x,y  -- top_left top_right  bottom_left  bottom_right
+    gap_x = 10, -- distance in pixels from alignment
+    gap_y = 40,
+
+    draw_borders = false,-- draws simple non-rounded one-colored borders around widget
+    border_width = 6,-- no effect if draw_borders set to no
+    border_inner_margin = 0,-- if not 0, then goto 0 will jump before default beginning of line
+--default_outline_color white
+--default_shade_color white
+--draw_graph_borders yes
+--draw_outline no
+	draw_shades = false,-- default would draw bad shades for text -.- looking like the text shifted by 1 line and in black
+--default_color white        # for (graph) border and background
+
+    cpu_avg_samples = 2,-- conky setting
+    net_avg_samples = 2,
+    no_buffers = true, -- Subtract (file system) buffers from used memory?
+    out_to_console = false,
+    out_to_stderr = false,
+--extra_newline no
+
+    own_window = true,
+    own_window_type = 'desktop',
+    own_window_transparent = true,  -- if yes, show background (isn't actually transparent, as it won't show underlying other windows, only the wallpaper, always ...
+	own_window_hints = 'undecorated,below,sticky,skip_taskbar,skip_pager',
+--own_window_argb_visual = true,
+--own_window_colour = '00FF00', -- no effect if own_window_transparent yes
+--own_window_argb_value = 100, -- (transparent) 0..255 (opaque) is ignored if own_window_transparent yes !
+
+
+    minimum_width = 170, minimum_height = 0,-- default is roughly 100px when tested, so this is necessary
+--stippled_borders 0
+    update_interval = 1,-- in seconds
+    uppercase = false,-- default is no (?)
+    use_spacer = 'none',
+
+    show_graph_scale = false,-- shows scale in upper left corner of graphs, if no custom scale specified
+    show_graph_range = false,-- shows e.g. "2m" for the network graph's horizontal axis
+
+    use_xft = true,-- antialiased fonts
+    xftalpha = 0.1,
+    font = 'Droid Sans:size=8',
+    color0 = 'white',    -- text
+    color1 = '#EAEAEA',
+    color2 = '#FCAF3E', -- title (yellow)
+    color3 = '#0040FF', -- info (bleu)
+    color4 = '#FF6600', -- bar (orange)
+    color5 = '#CCFFFF', 
+
+    pad_percents = 3,
+    temperature_unit = 'celsius',
+    top_cpu_separate = false,-- if false, use sum of cpu usage over all cores
+
+--interface eth0   # user variable to set which interface to listen to
+-- ^ doesn't work, use LUA ...
+-- @TODO: use LUA to merge Download and Upload Panel like in Netbalancer by using different colors
+-- @Note: all halfgraphs are 120px wide! (would like variable for this -.-)
+
+
+};
+
+conky.text = [[
+#-------------------------------------------------------------------------------
+#                                   SYSTEM
+#-------------------------------------------------------------------------------
+${color2}SYSTEM ${hr 2}${color0}
+Date   : ${time %A %d/%m/%Y %Hh%M} sem ${time %V}
+${execi 86400 lsb_release -si} : ${execi 86400 lsb_release -sr} ${execi 86400 lsb_release -sc}
+$sysname  : $kernel $machine
+Uptime : $uptime
+Host   : $nodename
+
+#-------------------------------------------------------------------------------
+#                                   CPU
+#-------------------------------------------------------------------------------
+${color2}CPU ${hr 2}${color0}
+${exec cat /proc/cpuinfo | grep "model name" -m 1 | cut -c 14-80}
+Temperature:${alignr}CPU : ${color3}${hwmon 1 temp 2}C°${color1} M/B : ${color3} ${hwmon 1 temp 1}C°
+${color B00000}${cpubar}${color0}
+${cpugraph 000000 00FF00}
+${voffset -24}${alignc}${cpu cpu0}%
+
+${if_match ${exec cat /proc/cpuinfo | grep "cpu cores" -m 1 | cut -c 13-80} >= 1}\
+Core 1: ${freq 1} MHz Temp: ${exec sensors|grep 'Core 0'|awk '{print $3}'} ${cpu cpu1}% ${color4}${cpubar cpu1}${color0}
+${endif}\
+${if_match ${exec cat /proc/cpuinfo | grep "cpu cores" -m 1 | cut -c 13-80} >= 2}\
+Core 2: ${freq 2} MHz Temp: ${exec sensors|grep 'Core 1'|awk '{print $3}'} ${cpu cpu2}% ${color4}${cpubar cpu2}${color0}
+${endif}\
+${if_match ${exec cat /proc/cpuinfo | grep "cpu cores" -m 1 | cut -c 13-80} >= 4}\
+Core 3: ${freq 3} MHz Temp: ${exec sensors|grep 'Core 2'|awk '{print $3}'} ${cpu cpu3}% ${color4}${cpubar cpu3}${color0}
+Core 4: ${freq 4} MHz Temp: ${exec sensors|grep 'Core 3'|awk '{print $3}'} ${cpu cpu4}% ${color4}${cpubar cpu4}${color0}
+${endif}\
+
+#-------------------------------------------------------------------------------
+#                                   GPU
+#-------------------------------------------------------------------------------
+${color2}VIDEO ${hr 2}${color0}
+${if_match ${exec lsmod | grep 'nvidia' -c} > 0}\
+${exec nvidia-smi --query-gpu=name --format=csv,noheader}
+Temperature: ${alignr}${color3}${exec nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits} °C${color0}
+Memory:${alignr}${exec nvidia-smi --query-gpu=memory.used --format=csv,noheader} / ${exec nvidia-smi --query-gpu=memory.total --format=csv,noheader}
+Clock GPU/Mem:${alignr}${nvidia gpufreq} MHz / ${nvidia memfreq} MHz
+${else}
+${exec lshw -class display | grep produit | cut -c 17-80}
+${endif}\
+
+#-------------------------------------------------------------------------------
+#                                  Memory
+#-------------------------------------------------------------------------------
+${color2}MEMORY ${hr 2}$color
+Ram: $mem / $memmax ($memperc%) ${color4}${membar 6}${color0}
+Swap: $swap / $swapmax ($swapperc%) ${color4}${swapbar 6}${color0}
+Process: $processes Running : $running_processes
+
+#-------------------------------------------------------------------------------
+#                                  Memory
+#-------------------------------------------------------------------------------
+${color2}APPLICATION ${hr 2}${color0}
+${color0}Name${goto 122}PID${goto 163}CPU%${goto 210}Mem%${color5}
+${top_mem name 1}${goto 115}${top_mem pid 1}${goto 160}${top_mem cpu 1}${goto 205}${top_mem mem 1}
+${top_mem name 2}${goto 115}${top_mem pid 2}${goto 160}${top_mem cpu 2}${goto 205}${top_mem mem 2}
+${top_mem name 3}${goto 115}${top_mem pid 3}${goto 160}${top_mem cpu 3}${goto 205}${top_mem mem 3}
+${top_mem name 4}${goto 115}${top_mem pid 4}${goto 160}${top_mem cpu 4}${goto 205}${top_mem mem 4}
+
+#-------------------------------------------------------------------------------
+#                                    HDD
+#-------------------------------------------------------------------------------
+${color2}DISK ${hr 2}${color0}
+Root ${fs_type /}: ${color5}${fs_free /} / ${fs_size /} ${color4} ${fs_bar 6 /}${color0}
+Home ${fs_type /home}: ${color5}${fs_free /home} / ${fs_size /home} ${color4} ${fs_bar 6 /home}${color0}
+${if_match ${exec df | grep '/windows' -c} > 0}\
+Windows ${fs_type /windows}: ${color5}${fs_free /windows} / ${fs_size /windows} ${color4} ${fs_bar 6 /windows}${color0}
+${endif}\
+${if_match ${exec df | grep '/work' -c} > 0}\
+Work ${fs_type /work}: ${color5}${fs_free /work} / ${fs_size /work}${color4} ${fs_bar 6 /work}${color0}
+${endif}\
+${if_match ${exec df | grep '/archive' -c} > 0}\
+Save ${fs_type /archive}: ${color5}${fs_free /archive} / ${fs_size /archive} ${color4} ${fs_bar 6 /archive}${color0}
+${endif}\
+
+${if_match ${exec lsblk | grep 'sda' -c} > 0}${exec hddtemp /dev/sda}${endif}
+${if_match ${exec lsblk | grep 'sdb' -c} > 0}${exec hddtemp /dev/sdb}${endif}
+${if_match ${exec lsblk | grep 'sdc' -c} > 0}${exec hddtemp /dev/sdc}${endif}
+${if_match ${exec lsblk | grep 'sdd' -c} > 0}${exec hddtemp /dev/sdd}${endif}
+
+#-------------------------------------------------------------------------------
+#                                  Network
+#-------------------------------------------------------------------------------
+${color2}NETWORK${hr 2}${color0}
+${if_up wlp3s0}\
+SSID: ${wireless_essid wlp3s0} ${alignr} ${wireless_link_qual_perc wlp3s0}% ${wireless_link_bar 8,60 wlp3s0}
+IP: ${color5}${addr wlp3s0} ${alignr} ${alignr}${color2}(${exec  wget -qO- http://ipecho.net/plain ; echo})
+Down total: ${totaldown wlp3s0} ${alignr}Up total: ${totalup wlp3s0}
+${downspeedgraph wlp3s0 25,140 000000 00ff00} ${alignr}${upspeedgraph wlp3s0 25,140 000000 00ff00}
+${offset 40}${voffset -25}${downspeed wlp3s0}k/s
+${offset 220}${voffset -14}${upspeed wlp3s0} k/s
+${endif}\
+${if_up eth0}\
+IP: ${color5}${addr eth0} ${alignr} ${alignr}(${exec  wget -qO- http://ipecho.net/plain ; echo})${color0}
+Down total: ${color5}${totaldown eth0} ${alignr}${color0}Up total: ${color5}${totalup eth0}${color0}
+${downspeedgraph eth0 25,140 000000 00ff00} ${alignr}${upspeedgraph eth0 25,140 000000 00ff00}
+${offset 40}${voffset -25}${downspeedf eth0} kiB/s
+${offset 220}${voffset -14}${upspeedf eth0} kiB/s
+${endif}\
+
+#-------------------------------------------------------------------------------
+#                                  Raid
+#-------------------------------------------------------------------------------
+${if_match ${exec cat /proc/mdstat | grep raid -c} > 0}\
+${color CC9900}RAID ${hr 2}${color0}
+${exec tac /proc/mdstat | head -n -1 | tac}
+${endif}\
+]];
